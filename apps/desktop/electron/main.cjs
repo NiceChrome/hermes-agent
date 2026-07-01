@@ -122,6 +122,7 @@ const {
 
 let nodePty = null
 let nodePtyDir = null
+let browserPopoutWindow = null
 
 try {
   nodePty = require('node-pty')
@@ -5881,6 +5882,100 @@ function closePetOverlay() {
   petOverlayWindow = null
 }
 
+function browserPopoutHtml(initialUrl) {
+  const safeUrl = /^https?:\/\//i.test(String(initialUrl || '')) ? String(initialUrl) : 'https://www.google.com'
+  const escapedUrl = safeUrl.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data:; child-src https: http:; frame-src https: http:; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'unsafe-inline';" />
+  <title>Hermes Browser</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, Segoe UI, system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; height: 100vh; display: flex; flex-direction: column; background: #0b0d12; color: #f5f7fb; }
+    .toolbar { height: 42px; display: flex; gap: 6px; align-items: center; padding: 6px; background: #121620; border-bottom: 1px solid #252b3a; }
+    button { height: 28px; min-width: 32px; border: 1px solid #31384a; border-radius: 6px; background: #1b2130; color: #f5f7fb; cursor: pointer; }
+    button:hover { background: #252d40; }
+    input { flex: 1; height: 28px; border: 1px solid #31384a; border-radius: 6px; padding: 0 10px; background: #090c12; color: #f5f7fb; outline: none; }
+    webview { flex: 1; min-height: 0; width: 100%; background: #fff; }
+    .hint { font-size: 11px; opacity: .65; padding: 0 4px; white-space: nowrap; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button id="back" title="Back">←</button>
+    <button id="forward" title="Forward">→</button>
+    <button id="reload" title="Reload">↻</button>
+    <input id="url" spellcheck="false" value="${escapedUrl}" />
+    <button id="go" title="Go">Go</button>
+    <button id="copy" title="Copy current URL">Copy</button>
+    <span class="hint">Hermes browser popout</span>
+  </div>
+  <webview id="view" src="${escapedUrl}" partition="persist:hermes-browser-popout" allowpopups></webview>
+  <script>
+    const view = document.getElementById('view')
+    const url = document.getElementById('url')
+    const normalize = value => {
+      const raw = String(value || '').trim()
+      if (!raw) return 'https://www.google.com'
+      if (/^https?:\/\//i.test(raw)) return raw
+      if (/^[\w.-]+\.[a-z]{2,}([/:?#].*)?$/i.test(raw)) return 'https://' + raw
+      return 'https://www.google.com/search?q=' + encodeURIComponent(raw)
+    }
+    const navigate = () => view.loadURL(normalize(url.value))
+    document.getElementById('back').onclick = () => { if (view.canGoBack()) view.goBack() }
+    document.getElementById('forward').onclick = () => { if (view.canGoForward()) view.goForward() }
+    document.getElementById('reload').onclick = () => view.reload()
+    document.getElementById('go').onclick = navigate
+    url.addEventListener('keydown', event => { if (event.key === 'Enter') navigate() })
+    document.getElementById('copy').onclick = async () => {
+      url.value = view.getURL() || url.value
+      url.select()
+      try { await navigator.clipboard.writeText(url.value) } catch { document.execCommand('copy') }
+    }
+    const sync = () => { url.value = view.getURL() || url.value }
+    view.addEventListener('did-navigate', sync)
+    view.addEventListener('did-navigate-in-page', sync)
+    view.addEventListener('page-title-updated', event => { document.title = event.title ? 'Hermes Browser — ' + event.title : 'Hermes Browser' })
+  </script>
+</body>
+</html>`
+}
+
+function createBrowserPopout(initialUrl = 'https://www.google.com') {
+  if (browserPopoutWindow && !browserPopoutWindow.isDestroyed()) {
+    browserPopoutWindow.focus()
+    return browserPopoutWindow
+  }
+
+  const icon = getAppIconPath()
+  browserPopoutWindow = new BrowserWindow({
+    width: 1100,
+    height: 760,
+    minWidth: 520,
+    minHeight: 360,
+    title: 'Hermes Browser',
+    icon,
+    backgroundColor: '#0b0d12',
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      webviewTag: true
+    }
+  })
+
+  browserPopoutWindow.on('closed', () => {
+    browserPopoutWindow = null
+  })
+  wireCommonWindowHandlers(browserPopoutWindow)
+  installDevToolsShortcut(browserPopoutWindow)
+  browserPopoutWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(browserPopoutHtml(initialUrl))}`)
+  return browserPopoutWindow
+}
+
 function createWindow() {
   const icon = getAppIconPath()
   const savedWindowState = readWindowState()
@@ -6070,6 +6165,11 @@ ipcMain.handle('hermes:window:openSession', async (_event, sessionId, opts) => {
 })
 ipcMain.handle('hermes:window:openNewSession', async () => {
   createNewSessionWindow()
+
+  return { ok: true }
+})
+ipcMain.handle('hermes:browser-popout:open', async (_event, url) => {
+  createBrowserPopout(typeof url === 'string' ? url : undefined)
 
   return { ok: true }
 })

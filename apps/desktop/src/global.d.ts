@@ -33,6 +33,8 @@ declare global {
       openSessionWindow: (sessionId: string, opts?: { watch?: boolean }) => Promise<{ ok: boolean; error?: string }>
       // Open (or focus) a compact secondary window on the new-session draft.
       openNewSessionWindow: () => Promise<{ ok: boolean; error?: string }>
+      // Open (or focus) the lightweight floating browser popout.
+      openBrowserPopout: (url?: string) => Promise<{ ok: boolean; error?: string }>
       // The pop-out pet overlay: a transparent always-on-top window hosting only
       // the mascot. The main renderer drives it (open/close/drag + state push);
       // the overlay sends control messages back (pop-in, composer submit).

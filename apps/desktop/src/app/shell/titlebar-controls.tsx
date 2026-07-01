@@ -112,6 +112,15 @@ export function TitlebarControls({ leftTools = [], tools = [], onOpenSettings }:
   // Static system tools — always pinned to the screen's right edge.
   const systemTools: TitlebarTool[] = [
     {
+      icon: <Codicon name="globe" />,
+      id: 'browser-popout',
+      label: 'Open browser popout',
+      onSelect: () => {
+        triggerHaptic('open')
+        void window.hermesDesktop.openBrowserPopout?.()
+      }
+    },
+    {
       active: hapticsMuted,
       icon: <Codicon name={hapticsMuted ? 'mute' : 'unmute'} />,
       id: 'haptics',
