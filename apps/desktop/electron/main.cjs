@@ -5701,6 +5701,9 @@ function spawnSecondaryWindow({ sessionId, watch, newSession } = {}) {
     minWidth: SESSION_WINDOW_MIN_WIDTH,
     minHeight: SESSION_WINDOW_MIN_HEIGHT,
     title: 'Hermes',
+    // Keep embedded browser/video fullscreen requests bounded to the renderer
+    // instead of letting Chromium put this whole OS window on the monitor.
+    fullscreenable: false,
     titleBarStyle: 'hidden',
     titleBarOverlay: getTitleBarOverlayOptions(),
     trafficLightPosition: IS_MAC ? WINDOW_BUTTON_POSITION : undefined,
@@ -5901,6 +5904,9 @@ function createWindow() {
     minWidth: WINDOW_MIN_WIDTH,
     minHeight: WINDOW_MIN_HEIGHT,
     title: 'Hermes',
+    // Keep embedded browser/video fullscreen requests bounded to the renderer
+    // instead of letting Chromium put this whole OS window on the monitor.
+    fullscreenable: false,
     // Frameless title bar on every platform so the renderer can paint the
     // "hide sidebar" button (and other left-side titlebar tools) flush with
     // the top edge — matching the macOS layout where the traffic lights sit
