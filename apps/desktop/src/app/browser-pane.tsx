@@ -119,10 +119,12 @@ export function EmbeddedBrowserPane({ floating = false, onClose, onToggleFloatin
   }
 
   const webview = createElement('webview', {
+    allowfullscreen: 'true',
     allowpopups: 'true',
     className: 'min-h-0 flex-1 bg-white',
     onDidNavigate: syncUrl,
     onDidNavigateInPage: syncUrl,
+    onEnterHtmlFullScreen: () => setToolbarHidden(true),
     partition: 'persist:hermes-browser-popout',
     ref: (node: WebviewElement | null) => {
       webviewRef.current = node
