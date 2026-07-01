@@ -36,6 +36,7 @@ type WebviewElement = HTMLElement & {
   goForward?: () => void
   loadURL?: (url: string) => void
   reload?: () => void
+  executeJavaScript?: (code: string) => Promise<unknown>
 }
 
 function normalizeBrowserUrl(value: string) {
@@ -90,10 +91,80 @@ function persistFloatingBounds(bounds: FloatingBrowserBounds) {
   }
 }
 
+const TOGGLE_CINEMA_SCRIPT = String.raw`(() => {
+  const styleId = 'hermes-bounded-cinema-style'
+  const existing = document.getElementById(styleId)
+
+  if (existing) {
+    existing.remove()
+    document.documentElement.classList.remove('hermes-bounded-cinema')
+    document.body?.classList.remove('hermes-bounded-cinema')
+    return false
+  }
+
+  const style = document.createElement('style')
+  style.id = styleId
+  style.textContent = \`
+    html.hermes-bounded-cinema,
+    body.hermes-bounded-cinema {
+      background: #000 !important;
+      height: 100vh !important;
+      margin: 0 !important;
+      overflow: hidden !important;
+    }
+
+    body.hermes-bounded-cinema ytd-app,
+    body.hermes-bounded-cinema #page-manager,
+    body.hermes-bounded-cinema ytd-watch-flexy,
+    body.hermes-bounded-cinema #columns,
+    body.hermes-bounded-cinema #primary,
+    body.hermes-bounded-cinema #primary-inner,
+    body.hermes-bounded-cinema #player,
+    body.hermes-bounded-cinema #player-container,
+    body.hermes-bounded-cinema #movie_player,
+    body.hermes-bounded-cinema .html5-video-player,
+    body.hermes-bounded-cinema .html5-video-container,
+    body.hermes-bounded-cinema video {
+      height: 100vh !important;
+      inset: 0 !important;
+      margin: 0 !important;
+      max-height: none !important;
+      max-width: none !important;
+      padding: 0 !important;
+      position: fixed !important;
+      transform: none !important;
+      width: 100vw !important;
+      z-index: 2147483647 !important;
+    }
+
+    body.hermes-bounded-cinema video {
+      object-fit: contain !important;
+      background: #000 !important;
+    }
+
+    body.hermes-bounded-cinema ytd-masthead,
+    body.hermes-bounded-cinema #masthead-container,
+    body.hermes-bounded-cinema #secondary,
+    body.hermes-bounded-cinema #comments,
+    body.hermes-bounded-cinema #below,
+    body.hermes-bounded-cinema #chat,
+    body.hermes-bounded-cinema ytd-watch-metadata,
+    body.hermes-bounded-cinema ytd-merch-shelf-renderer,
+    body.hermes-bounded-cinema ytd-playlist-panel-renderer {
+      display: none !important;
+    }
+  \`
+  document.documentElement.classList.add('hermes-bounded-cinema')
+  document.body?.classList.add('hermes-bounded-cinema')
+  document.head.appendChild(style)
+  return true
+})()`
+
 export function EmbeddedBrowserPane({ floating = false, onClose, onToggleFloating }: EmbeddedBrowserPaneProps) {
   const webviewRef = useRef<WebviewElement | null>(null)
   const [url, setUrl] = useState(DEFAULT_URL)
   const [toolbarHidden, setToolbarHidden] = useState(false)
+  const [cinemaModeActive, setCinemaModeActive] = useState(false)
 
   const navigate = () => {
     const next = normalizeBrowserUrl(url)
@@ -104,6 +175,11 @@ export function EmbeddedBrowserPane({ floating = false, onClose, onToggleFloatin
   const syncUrl = () => {
     const current = webviewRef.current?.getURL?.()
     if (current) setUrl(current)
+  }
+
+  const handleNavigate = () => {
+    setCinemaModeActive(false)
+    syncUrl()
   }
 
   const copyUrl = async () => {
@@ -118,13 +194,21 @@ export function EmbeddedBrowserPane({ floating = false, onClose, onToggleFloatin
     }
   }
 
+  const toggleCinemaMode = async () => {
+    try {
+      const active = await webviewRef.current?.executeJavaScript?.(TOGGLE_CINEMA_SCRIPT)
+      setCinemaModeActive(Boolean(active))
+      setToolbarHidden(Boolean(active))
+    } catch {
+      setCinemaModeActive(false)
+    }
+  }
+
   const webview = createElement('webview', {
-    allowfullscreen: 'true',
     allowpopups: 'true',
     className: 'min-h-0 flex-1 bg-white',
-    onDidNavigate: syncUrl,
+    onDidNavigate: handleNavigate,
     onDidNavigateInPage: syncUrl,
-    onEnterHtmlFullScreen: () => setToolbarHidden(true),
     partition: 'persist:hermes-browser-popout',
     ref: (node: WebviewElement | null) => {
       webviewRef.current = node
@@ -214,6 +298,16 @@ export function EmbeddedBrowserPane({ floating = false, onClose, onToggleFloatin
             <Codicon name={floating ? 'layout-sidebar-right' : 'multiple-windows'} size="0.875rem" />
           </Button>
         )}
+        <Button
+          aria-label={cinemaModeActive ? 'Exit bounded cinema mode' : 'Enter bounded cinema mode'}
+          onClick={() => void toggleCinemaMode()}
+          onPointerDown={event => event.stopPropagation()}
+          size="icon-xs"
+          title={cinemaModeActive ? 'Exit bounded cinema mode' : 'Fit video to this floating window'}
+          variant={cinemaModeActive ? 'secondary' : 'ghost'}
+        >
+          <Codicon name="screen-full" size="0.875rem" />
+        </Button>
         <Button
           aria-label="Hide browser controls"
           onClick={() => setToolbarHidden(true)}
