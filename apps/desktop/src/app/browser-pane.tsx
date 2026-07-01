@@ -132,7 +132,7 @@ export function EmbeddedBrowserPane({ floating = false, onClose, onToggleFloatin
   return (
     <section
       className={cn(
-        'flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-(--ui-editor-surface-background)',
+        'group/browser relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-(--ui-editor-surface-background)',
         floating
           ? 'rounded-xl border border-(--ui-stroke-secondary) shadow-2xl'
           : 'border-l border-(--ui-stroke-secondary) pt-(--titlebar-height)'
@@ -140,8 +140,11 @@ export function EmbeddedBrowserPane({ floating = false, onClose, onToggleFloatin
     >
       <div
         className={cn(
-          'flex h-10 shrink-0 items-center gap-1.5 border-b border-(--ui-stroke-secondary) px-2',
-          floating && 'cursor-move select-none [app-region:no-drag]'
+          'z-10 flex h-8 shrink-0 items-center gap-1 rounded-lg border border-(--ui-stroke-secondary) bg-(--ui-editor-surface-background)/85 px-1.5 shadow-sm backdrop-blur transition-all duration-150',
+          'opacity-[0.18] hover:opacity-100 focus-within:opacity-100 group-hover/browser:opacity-100',
+          floating
+            ? 'absolute left-2 right-2 top-2 cursor-move select-none [app-region:no-drag]'
+            : 'mx-2 mb-1 mt-1 cursor-move select-none [app-region:no-drag]'
         )}
         data-browser-drag-handle="true"
       >
@@ -179,8 +182,8 @@ export function EmbeddedBrowserPane({ floating = false, onClose, onToggleFloatin
         <input
           aria-label="Browser URL or search"
           className={cn(
-            'h-7 min-w-0 flex-1 rounded-md border border-(--ui-stroke-secondary) bg-background px-2 text-xs text-foreground outline-none',
-            'focus:border-(--ui-stroke-primary) focus:ring-1 focus:ring-(--ui-stroke-primary)'
+            'h-6 min-w-0 flex-1 rounded-md border border-(--ui-stroke-secondary)/70 bg-background/70 px-2 text-[0.68rem] text-foreground/80 outline-none transition-all',
+            'placeholder:text-foreground/35 hover:bg-background focus:border-(--ui-stroke-primary) focus:bg-background focus:text-foreground focus:ring-1 focus:ring-(--ui-stroke-primary)'
           )}
           onChange={event => setUrl(event.target.value)}
           onKeyDown={event => {
@@ -293,7 +296,7 @@ export function FloatingBrowserWindow({ onClose, onDock }: FloatingBrowserWindow
         <EmbeddedBrowserPane floating onClose={onClose} onToggleFloating={onDock} />
         <div
           aria-label="Resize browser"
-          className="absolute bottom-1 right-1 h-4 w-4 cursor-nwse-resize rounded-sm border-b-2 border-r-2 border-white/40"
+          className="absolute bottom-1 right-1 h-4 w-4 cursor-nwse-resize rounded-sm border-b-2 border-r-2 border-white/25 opacity-20 transition-opacity hover:border-white/60 hover:opacity-100"
           onPointerDown={event => startPointerAction(event, 'resize')}
           onPointerMove={updatePointerAction}
           onPointerUp={endPointerAction}
