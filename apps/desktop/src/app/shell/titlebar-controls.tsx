@@ -114,10 +114,10 @@ export function TitlebarControls({ leftTools = [], tools = [], onOpenSettings }:
     {
       icon: <Codicon name="globe" />,
       id: 'browser-popout',
-      label: 'Open browser popout',
+      label: 'Toggle embedded browser',
       onSelect: () => {
         triggerHaptic('open')
-        void window.hermesDesktop.openBrowserPopout?.()
+        window.dispatchEvent(new CustomEvent('hermes:embedded-browser:toggle'))
       }
     },
     {

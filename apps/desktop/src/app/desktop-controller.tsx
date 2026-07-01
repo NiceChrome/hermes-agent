@@ -1,6 +1,6 @@
 import { useStore } from '@nanostores/react'
 import { useQueryClient } from '@tanstack/react-query'
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import { BootFailureOverlay } from '@/components/boot-failure-overlay'
@@ -81,6 +81,7 @@ import { openUpdatesWindow, startUpdatePoller, stopUpdatePoller } from '../store
 import { isSecondaryWindow } from '../store/windows'
 
 import { ChatView } from './chat'
+import { EmbeddedBrowserPane } from './browser-pane'
 import { requestComposerFocus, requestComposerInsert } from './chat/composer/focus'
 import { useComposerActions } from './chat/hooks/use-composer-actions'
 import {
@@ -163,6 +164,7 @@ export function DesktopController() {
   const resumeExhaustedSessionId = useStore($resumeExhaustedSessionId)
   const filePreviewTarget = useStore($filePreviewTarget)
   const previewTarget = useStore($previewTarget)
+  const [embeddedBrowserOpen, setEmbeddedBrowserOpen] = useState(false)
   const selectedStoredSessionId = useStore($selectedStoredSessionId)
   const terminalTakeover = useStore($terminalTakeover)
   const reviewOpen = useStore($reviewOpen)
@@ -222,6 +224,13 @@ export function DesktopController() {
   })
 
   const { connectionRef, gatewayRef, requestGateway } = useGatewayRequest()
+
+  useEffect(() => {
+    const onToggleBrowser = () => setEmbeddedBrowserOpen(open => !open)
+    window.addEventListener('hermes:embedded-browser:toggle', onToggleBrowser)
+
+    return () => window.removeEventListener('hermes:embedded-browser:toggle', onToggleBrowser)
+  }, [])
 
   useEffect(() => {
     window.hermesDesktop?.setPreviewShortcutActive?.(Boolean(chatOpen && (filePreviewTarget || previewTarget)))
@@ -1047,6 +1056,7 @@ export function DesktopController() {
   // Other sidebars docked as real columns on the terminal's rail. Force-collapsed
   // hover-reveal overlays (narrow window) don't take a column, so they don't count.
   const railColumnOpen =
+    (chatOpen && embeddedBrowserOpen) ||
     (chatOpen && Boolean(previewTarget || filePreviewTarget) && previewPaneOpen) ||
     (chatOpen && !narrowViewport && fileBrowserOpen) ||
     (chatOpen && Boolean(currentCwd.trim()) && !narrowViewport && reviewOpen)
@@ -1120,6 +1130,21 @@ export function DesktopController() {
       width={FILE_BROWSER_DEFAULT_WIDTH}
     >
       <ReviewPane key={currentCwd || 'no-cwd'} />
+    </Pane>
+  )
+
+  const browserPane = (
+    <Pane
+      disabled={!chatOpen || !embeddedBrowserOpen}
+      id="embedded-browser"
+      key="embedded-browser"
+      maxWidth="80vw"
+      minWidth="24rem"
+      resizable
+      side={railSide}
+      width="52vw"
+    >
+      <EmbeddedBrowserPane onClose={() => setEmbeddedBrowserOpen(false)} />
     </Pane>
   )
 
@@ -1227,6 +1252,7 @@ export function DesktopController() {
         adjacent to the chat.
       */}
       {panesFlipped ? fileBrowserPane : terminalPane}
+      {browserPane}
       {previewPane}
       {reviewPane}
       {panesFlipped ? terminalPane : fileBrowserPane}
