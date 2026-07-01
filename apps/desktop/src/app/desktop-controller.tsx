@@ -81,7 +81,7 @@ import { openUpdatesWindow, startUpdatePoller, stopUpdatePoller } from '../store
 import { isSecondaryWindow } from '../store/windows'
 
 import { ChatView } from './chat'
-import { EmbeddedBrowserPane } from './browser-pane'
+import { EmbeddedBrowserPane, FloatingBrowserWindow } from './browser-pane'
 import { requestComposerFocus, requestComposerInsert } from './chat/composer/focus'
 import { useComposerActions } from './chat/hooks/use-composer-actions'
 import {
@@ -165,6 +165,7 @@ export function DesktopController() {
   const filePreviewTarget = useStore($filePreviewTarget)
   const previewTarget = useStore($previewTarget)
   const [embeddedBrowserOpen, setEmbeddedBrowserOpen] = useState(false)
+  const [embeddedBrowserFloating, setEmbeddedBrowserFloating] = useState(false)
   const selectedStoredSessionId = useStore($selectedStoredSessionId)
   const terminalTakeover = useStore($terminalTakeover)
   const reviewOpen = useStore($reviewOpen)
@@ -923,7 +924,17 @@ export function DesktopController() {
   // layer) so pane resize handles still paint above it. Terminals own their state
   // (incl. a snapshotted cwd) independent of the session, so switching sessions
   // never rebuilds or closes them; toggling the pane never rebuilds the shells.
-  const mainOverlays = <PersistentTerminal onAddSelectionToChat={composer.addTerminalSelectionAttachment} />
+  const mainOverlays = (
+    <>
+      <PersistentTerminal onAddSelectionToChat={composer.addTerminalSelectionAttachment} />
+      {chatOpen && embeddedBrowserOpen && embeddedBrowserFloating && (
+        <FloatingBrowserWindow
+          onClose={() => setEmbeddedBrowserOpen(false)}
+          onDock={() => setEmbeddedBrowserFloating(false)}
+        />
+      )}
+    </>
+  )
 
   const overlays = (
     <>
@@ -1056,7 +1067,7 @@ export function DesktopController() {
   // Other sidebars docked as real columns on the terminal's rail. Force-collapsed
   // hover-reveal overlays (narrow window) don't take a column, so they don't count.
   const railColumnOpen =
-    (chatOpen && embeddedBrowserOpen) ||
+    (chatOpen && embeddedBrowserOpen && !embeddedBrowserFloating) ||
     (chatOpen && Boolean(previewTarget || filePreviewTarget) && previewPaneOpen) ||
     (chatOpen && !narrowViewport && fileBrowserOpen) ||
     (chatOpen && Boolean(currentCwd.trim()) && !narrowViewport && reviewOpen)
@@ -1135,7 +1146,7 @@ export function DesktopController() {
 
   const browserPane = (
     <Pane
-      disabled={!chatOpen || !embeddedBrowserOpen}
+      disabled={!chatOpen || !embeddedBrowserOpen || embeddedBrowserFloating}
       id="embedded-browser"
       key="embedded-browser"
       maxWidth="80vw"
@@ -1144,7 +1155,10 @@ export function DesktopController() {
       side={railSide}
       width="52vw"
     >
-      <EmbeddedBrowserPane onClose={() => setEmbeddedBrowserOpen(false)} />
+      <EmbeddedBrowserPane
+        onClose={() => setEmbeddedBrowserOpen(false)}
+        onToggleFloating={() => setEmbeddedBrowserFloating(true)}
+      />
     </Pane>
   )
 
