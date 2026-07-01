@@ -141,7 +141,7 @@ export function EmbeddedBrowserPane({ floating = false, onClose, onToggleFloatin
       <div
         className={cn(
           'z-10 flex h-8 shrink-0 items-center gap-1 rounded-lg border border-(--ui-stroke-secondary) bg-(--ui-editor-surface-background)/85 px-1.5 shadow-sm backdrop-blur transition-all duration-150',
-          'opacity-[0.18] hover:opacity-100 focus-within:opacity-100 group-hover/browser:opacity-100',
+          'opacity-[0.14] hover:opacity-100 focus-within:opacity-100',
           floating
             ? 'absolute left-2 right-2 top-2 cursor-move select-none [app-region:no-drag]'
             : 'mx-2 mb-1 mt-1 cursor-move select-none [app-region:no-drag]'
