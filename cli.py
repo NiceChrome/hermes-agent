@@ -11832,8 +11832,8 @@ class HermesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             _voice_prefix = ""
             if self._voice_mode and isinstance(message, str):
                 _voice_prefix = (
-                    "[Voice input — respond concisely and conversationally, "
-                    "2-3 sentences max. No code blocks or markdown.] "
+                    "[Voice input — respond with short, direct answers suitable for TTS. "
+                    "Do not be super long. No code blocks or markdown unless explicitly requested.] "
                 )
 
             def run_agent():
