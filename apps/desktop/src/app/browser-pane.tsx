@@ -93,6 +93,7 @@ function persistFloatingBounds(bounds: FloatingBrowserBounds) {
 export function EmbeddedBrowserPane({ floating = false, onClose, onToggleFloating }: EmbeddedBrowserPaneProps) {
   const webviewRef = useRef<WebviewElement | null>(null)
   const [url, setUrl] = useState(DEFAULT_URL)
+  const [toolbarHidden, setToolbarHidden] = useState(false)
 
   const navigate = () => {
     const next = normalizeBrowserUrl(url)
@@ -141,7 +142,7 @@ export function EmbeddedBrowserPane({ floating = false, onClose, onToggleFloatin
       <div
         className={cn(
           'z-10 flex h-8 shrink-0 items-center gap-1 rounded-lg border border-(--ui-stroke-secondary) bg-(--ui-editor-surface-background)/85 px-1.5 shadow-sm backdrop-blur transition-all duration-150',
-          'opacity-[0.14] hover:opacity-100 focus-within:opacity-100',
+          toolbarHidden ? 'pointer-events-none -translate-y-1 opacity-0' : 'opacity-[0.14] hover:opacity-100 focus-within:opacity-100',
           floating
             ? 'absolute left-2 right-2 top-2 cursor-move select-none [app-region:no-drag]'
             : 'mx-2 mb-1 mt-1 cursor-move select-none [app-region:no-drag]'
@@ -211,10 +212,34 @@ export function EmbeddedBrowserPane({ floating = false, onClose, onToggleFloatin
             <Codicon name={floating ? 'layout-sidebar-right' : 'multiple-windows'} size="0.875rem" />
           </Button>
         )}
+        <Button
+          aria-label="Hide browser controls"
+          onClick={() => setToolbarHidden(true)}
+          onPointerDown={event => event.stopPropagation()}
+          size="icon-xs"
+          title="Hide controls for picture-in-picture mode"
+          variant="ghost"
+        >
+          <span className="text-[0.7rem] leading-none">▴</span>
+        </Button>
         <Button aria-label="Close browser" onClick={onClose} onPointerDown={event => event.stopPropagation()} size="icon-xs" title="Close browser" variant="ghost">
           <Codicon name="close" size="0.875rem" />
         </Button>
       </div>
+      {toolbarHidden && (
+        <button
+          aria-label="Show browser controls"
+          className={cn(
+            'absolute left-1/2 top-2 z-20 h-5 -translate-x-1/2 rounded-full border border-(--ui-stroke-secondary) bg-(--ui-editor-surface-background)/75 px-2 text-[0.65rem] text-foreground/60 opacity-20 shadow-sm backdrop-blur transition-opacity hover:text-foreground hover:opacity-100 focus:opacity-100',
+            !floating && 'top-[calc(var(--titlebar-height)+0.5rem)]'
+          )}
+          onClick={() => setToolbarHidden(false)}
+          title="Show browser controls"
+          type="button"
+        >
+          controls
+        </button>
+      )}
       {webview}
     </section>
   )
