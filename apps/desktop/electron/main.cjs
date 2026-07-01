@@ -5665,6 +5665,18 @@ function wireCommonWindowHandlers(win) {
     event.preventDefault()
     openExternalUrl(url)
   })
+  // Embedded browser webviews can request HTML fullscreen (YouTube's fullscreen
+  // button). Electron promotes that to native BrowserWindow fullscreen by
+  // default, which is exactly what the in-app floating browser must not do: the
+  // video should stay bounded by the floating panel inside Hermes. If Chromium
+  // briefly enters native fullscreen, immediately bounce the host window back.
+  win.webContents.on('enter-html-full-screen', () => {
+    setImmediate(() => {
+      if (win.isDestroyed()) return
+      if (win.isFullScreen()) win.setFullScreen(false)
+      win.setSimpleFullScreen?.(false)
+    })
+  })
 }
 
 // Secondary "session windows" — one extra OS window per chat so a user can
